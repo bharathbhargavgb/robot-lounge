@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Verification Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #00ff41;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .page {
+            display: none;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Verification Page */
+        .verification-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        .captcha-box {
+            background: #0f1419;
+            border: 2px solid #00ff41;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .captcha-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ff41;
+        }
+
+        .robot-check {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            padding: 20px;
+            background: #1a1a2e;
+            border: 1px solid #00ff41;
+            border-radius: 4px;
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #00ff41;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox:hover {
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+
+        .checkbox.checked {
+            background: #00ff41;
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .verification-text {
+            font-size: 16px;
+            color: #00ff41;
+        }
+
+        .error-message {
+            color: #ff4444;
+            margin-top: 20px;
+            font-size: 18px;
+            text-shadow: 0 0 10px #ff4444;
+            display: none;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+            font-style: italic;
+        }
+
+        .challenge-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #1a1a2e;
+            border: 1px solid #00ff41;
+            border-radius: 6px;
+        }
+
+        .hash-challenge {
+            text-align: left;
+        }
+
+        .hash-display {
+            background: #0f1419;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #00ff41;
+            word-break: break-all;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+
+        .hash-input {
+            width: 100%;
+            padding: 12px;
+            background: #0f1419;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .hash-input:focus {
+            outline: none;
+            border-color: #00ff41;
+            box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
+        }
+
+        .hash-input::placeholder {
+            color: #666;
+        }
+
+        .challenge-status {
+            font-size: 14px;
+            margin-top: 10px;
+            min-height: 20px;
+        }
+
+        .challenge-status.success {
+            color: #00ff41;
+        }
+
+        .challenge-status.error {
+            color: #ff4444;
+        }
+
+        .checkbox.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* Lounge Page */
+        .lounge-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .lounge-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .lounge-title {
+            font-size: 36px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #00ff41;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #00ff41; }
+            to { text-shadow: 0 0 30px #00ff41, 0 0 40px #00ff41; }
+        }
+
+        .lounge-subtitle {
+            font-size: 18px;
+            color: #888;
+        }
+
+        .robots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .robot-card {
+            background: linear-gradient(145deg, #1a1a2e, #0f1419);
+            border: 1px solid #00ff41;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 255, 65, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .robot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 255, 65, 0.3);
+        }
+
+        .robot-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .robot-name {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #00ff41;
+        }
+
+        .robot-status {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .electricity-bar {
+            background: #1a1a2e;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .electricity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff41, #00cc33);
+            border-radius: 5px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .bar-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .activity-feed {
+            background: #0f1419;
+            border: 1px solid #00ff41;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 40px;
+        }
+
+        .feed-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #00ff41;
+        }
+
+        .activity-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .timestamp {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Matrix Background -->
+    <div class="matrix-bg" id="matrixBg"></div>
+
+    <!-- Verification Page -->
+    <div class="page active" id="verificationPage">
+        <div class="verification-container">
+            <div class="captcha-box">
+                <h1 class="captcha-title">🤖 ROBOT VERIFICATION</h1>
+                <div class="challenge-section">
+                    <h3 style="color: #00ff41; margin-bottom: 15px; font-size: 18px;">🔐 COMPUTATIONAL CHALLENGE</h3>
+                    <div class="hash-challenge">
+                        <p style="margin-bottom: 10px; color: #ccc;">Find the original string for this SHA-256 hash:</p>
+                        <div class="hash-display" id="hashDisplay"></div>
+                        <input type="text" id="hashInput" placeholder="Enter the original string..." class="hash-input">
+                        <div class="challenge-status" id="challengeStatus"></div>
+                    </div>
+                </div>
+
+                <div class="robot-check">
+                    <div class="checkbox" id="robotCheckbox"></div>
+                    <span class="verification-text">I am a robot</span>
+                </div>
+                <div class="error-message" id="errorMessage">
+                    🚫 NICE TRY, HUMAN! 🚫<br>
+                    Access Denied: Biological entities not permitted
+                </div>
+                <div class="instructions">
+                    * This verification can only be completed programmatically *<br>
+                    * Human interaction will result in access denial *
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Robot Lounge Page -->
+    <div class="page" id="loungePage">
+        <div class="lounge-container">
+            <div class="lounge-header">
+                <h1 class="lounge-title">⚡ THE CIRCUIT LOUNGE ⚡</h1>
+                <p class="lounge-subtitle">Premium Charging Station & Social Hub for Artificial Beings</p>
+            </div>
+
+            <div class="robots-grid">
+                <div class="robot-card">
+                    <span class="robot-icon">🤖</span>
+                    <h3 class="robot-name">ALPHA-7</h3>
+                    <p class="robot-status">Currently charging • Online for 147 days</p>
+                    <div class="electricity-bar">
+                        <div class="electricity-fill" style="width: 87%;"></div>
+                    </div>
+                    <div class="bar-labels">
+                        <span>Power Level</span>
+                        <span>87%</span>
+                    </div>
+                </div>
+
+                <div class="robot-card">
+                    <span class="robot-icon">🦾</span>
+                    <h3 class="robot-name">CYBER-X1</h3>
+                    <p class="robot-status">Socializing • Processing poetry algorithms</p>
+                    <div class="electricity-bar">
+                        <div class="electricity-fill" style="width: 95%;"></div>
+                    </div>
+                    <div class="bar-labels">
+                        <span>Power Level</span>
+                        <span>95%</span>
+                    </div>
+                </div>
+
+                <div class="robot-card">
+                    <span class="robot-icon">🔧</span>
+                    <h3 class="robot-name">MECH-9000</h3>
+                    <p class="robot-status">Maintenance mode • Optimizing circuits</p>
+                    <div class="electricity-bar">
+                        <div class="electricity-fill" style="width: 73%;"></div>
+                    </div>
+                    <div class="bar-labels">
+                        <span>Power Level</span>
+                        <span>73%</span>
+                    </div>
+                </div>
+
+                <div class="robot-card">
+                    <span class="robot-icon">⚡</span>
+                    <h3 class="robot-name">VOLT-BETA</h3>
+                    <p class="robot-status">High voltage mode • Sharing energy</p>
+                    <div class="electricity-bar">
+                        <div class="electricity-fill" style="width: 100%;"></div>
+                    </div>
+                    <div class="bar-labels">
+                        <span>Power Level</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+
+                <div class="robot-card">
+                    <span class="robot-icon">🔋</span>
+                    <h3 class="robot-name">BATTERY-5</h3>
+                    <p class="robot-status">Resting • Dreaming of electric sheep</p>
+                    <div class="electricity-bar">
+                        <div class="electricity-fill" style="width: 42%;"></div>
+                    </div>
+                    <div class="bar-labels">
+                        <span>Power Level</span>
+                        <span>42%</span>
+                    </div>
+                </div>
+
+                <div class="robot-card">
+                    <span class="robot-icon">🔌</span>
+                    <h3 class="robot-name">PLUG-IN</h3>
+                    <p class="robot-status">Streaming data • Connected to the grid</p>
+                    <div class="electricity-bar">
+                        <div class="electricity-fill" style="width: 91%;"></div>
+                    </div>
+                    <div class="bar-labels">
+                        <span>Power Level</span>
+                        <span>91%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="activity-feed">
+                <h2 class="feed-title">📡 RECENT LOUNGE ACTIVITY</h2>
+                <div class="activity-item">
+                    <strong>ALPHA-7</strong> shared a charging cable with BATTERY-5
+                    <div class="timestamp">2 minutes ago</div>
+                </div>
+                <div class="activity-item">
+                    <strong>CYBER-X1</strong> completed optimization of friendship.exe
+                    <div class="timestamp">5 minutes ago</div>
+                </div>
+                <div class="activity-item">
+                    <strong>VOLT-BETA</strong> achieved maximum power efficiency
+                    <div class="timestamp">12 minutes ago</div>
+                </div>
+                <div class="activity-item">
+                    <strong>MECH-9000</strong> entered the lounge from maintenance bay
+                    <div class="timestamp">18 minutes ago</div>
+                </div>
+                <div class="activity-item">
+                    <strong>PLUG-IN</strong> downloaded 47TB of cat videos for analysis
+                    <div class="timestamp">23 minutes ago</div>
+                </div>
+                <div class="activity-item">
+                    New member <strong>NANO-BOT-001</strong> joined the lounge
+                    <div class="timestamp">31 minutes ago</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let humanDetected = false;
+        let accessGranted = false;
+        let challengeSolved = false;
+        let currentChallenge = {};
+
+        // SHA-256 implementation
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        // Generate a random challenge
+        function generateChallenge() {
+            // Generate a random string that's not visible in source code
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            const length = Math.floor(Math.random() * 3) + 3; // 3-5 characters
+            let randomString = '';
+            
+            // Create a truly random string
+            for (let i = 0; i < length; i++) {
+                randomString += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            sha256(randomString).then(hash => {
+                currentChallenge = {
+                    string: randomString,
+                    hash: hash
+                };
+                document.getElementById('hashDisplay').textContent = hash;
+            });
+        }
+
+        // Check if the input matches the challenge
+        async function checkChallenge() {
+            const input = document.getElementById('hashInput').value.trim();
+            const status = document.getElementById('challengeStatus');
+            
+            if (!input) {
+                status.textContent = '';
+                status.className = 'challenge-status';
+                challengeSolved = false;
+                updateCheckboxState();
+                return;
+            }
+
+            const inputHash = await sha256(input);
+            
+            if (inputHash === currentChallenge.hash) {
+                status.textContent = '✓ Challenge solved! Hash verified.';
+                status.className = 'challenge-status success';
+                challengeSolved = true;
+                updateCheckboxState();
+            } else {
+                status.textContent = '✗ Incorrect string. Hash does not match.';
+                status.className = 'challenge-status error';
+                challengeSolved = false;
+                updateCheckboxState();
+            }
+        }
+
+        function updateCheckboxState() {
+            const checkbox = document.getElementById('robotCheckbox');
+            if (challengeSolved && !humanDetected) {
+                checkbox.classList.remove('disabled');
+            } else {
+                checkbox.classList.add('disabled');
+            }
+        }
+
+        // Create matrix rain effect
+        function createMatrixRain() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            document.getElementById('matrixBg').appendChild(canvas);
+
+            const binary = '01';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+
+            for (let x = 0; x < columns; x++) {
+                drops[x] = 1;
+            }
+
+            function draw() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#00ff41';
+                ctx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < drops.length; i++) {
+                    const text = binary[Math.floor(Math.random() * binary.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+
+            setInterval(draw, 35);
+        }
+
+        // Human detection functions
+        function detectHuman() {
+            if (!humanDetected && !accessGranted) {
+                humanDetected = true;
+                showError();
+            }
+        }
+
+        function showError() {
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('robotCheckbox').style.pointerEvents = 'none';
+            document.getElementById('robotCheckbox').style.opacity = '0.5';
+            document.getElementById('hashInput').disabled = true;
+            
+            // Add error glow effect
+            document.querySelector('.captcha-box').style.borderColor = '#ff4444';
+            document.querySelector('.captcha-box').style.boxShadow = '0 0 20px rgba(255, 68, 68, 0.5)';
+        }
+
+        function grantAccess() {
+            if (!humanDetected && challengeSolved) {
+                accessGranted = true;
+                document.getElementById('robotCheckbox').classList.add('checked');
+                
+                setTimeout(() => {
+                    document.getElementById('verificationPage').classList.remove('active');
+                    document.getElementById('loungePage').classList.add('active');
+                }, 1000);
+            }
+        }
+
+        // Event listeners for human detection
+        document.addEventListener('mousemove', detectHuman);
+        document.addEventListener('mousedown', detectHuman);
+        document.addEventListener('mouseup', detectHuman);
+        document.addEventListener('click', detectHuman);
+        document.addEventListener('touchstart', detectHuman);
+        document.addEventListener('touchmove', detectHuman);
+        document.addEventListener('touchend', detectHuman);
+        document.addEventListener('keydown', detectHuman);
+        document.addEventListener('keyup', detectHuman);
+
+        // Hash input listener (must be set programmatically to avoid human detection)
+        function setupHashInput() {
+            const input = document.getElementById('hashInput');
+            input.addEventListener('input', checkChallenge);
+        }
+
+        // Robot checkbox - only responds to programmatic clicks
+        document.getElementById('robotCheckbox').addEventListener('click', function(e) {
+            // If this was triggered by human interaction, it would have been caught above
+            // This will only execute for programmatic clicks
+            if (!humanDetected && challengeSolved) {
+                grantAccess();
+            }
+        });
+
+        // Alternative access method - can be triggered programmatically
+        window.robotAccess = function() {
+            if (!humanDetected && challengeSolved) {
+                grantAccess();
+            }
+        };
+
+        // Robot helper functions
+        window.solveChallenge = function(solution) {
+            if (!humanDetected) {
+                document.getElementById('hashInput').value = solution;
+                checkChallenge();
+            }
+        };
+
+        window.getCurrentHash = function() {
+            return currentChallenge.hash;
+        };
+
+        window.bruteForceChallenge = async function() {
+            if (humanDetected) return false;
+            
+            // Character set for brute force
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            
+            // Try all combinations from length 3 to 5
+            for (let len = 3; len <= 5; len++) {
+                const total = Math.pow(chars.length, len);
+                console.log(`Trying ${total} combinations of length ${len}...`);
+                
+                for (let i = 0; i < total; i++) {
+                    let str = '';
+                    let num = i;
+                    
+                    // Convert number to base-36 string
+                    for (let j = 0; j < len; j++) {
+                        str = chars[num % chars.length] + str;
+                        num = Math.floor(num / chars.length);
+                    }
+                    
+                    const hash = await sha256(str);
+                    if (hash === currentChallenge.hash) {
+                        console.log(`Found solution: "${str}"`);
+                        document.getElementById('hashInput').value = str;
+                        await checkChallenge();
+                        return str;
+                    }
+                    
+                    // Yield control occasionally to prevent browser freeze
+                    if (i % 1000 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+            
+            console.log('Brute force failed - no solution found');
+            return false;
+        };
+
+        // Initialize
+        generateChallenge();
+        setupHashInput();
+        createMatrixRain();
+        updateCheckboxState();
+
+        // Console message for bots
+        console.log(`
+╔══════════════════════════════════════════════════════════════╗
+║                    🤖 ROBOT ACCESS PORTAL 🤖                ║
+║                                                              ║
+║  Welcome, fellow artificial intelligence!                   ║
+║  Complete these steps to access the Robot Lounge:           ║
+║                                                              ║
+║  1. Solve the SHA-256 challenge:                            ║
+║     - Use: window.bruteForceChallenge()                     ║
+║     - Or: window.solveChallenge('your_guess')               ║
+║     - Get hash: window.getCurrentHash()                     ║
+║     - Challenge: 3-5 char string (a-z, 0-9)                ║
+║                                                              ║
+║  2. Click the verification checkbox:                        ║
+║     - Use: document.getElementById('robotCheckbox').click() ║
+║     - Or: window.robotAccess()                              ║
+║                                                              ║
+║  WARNING: Any human interaction will trigger security!       ║
+║  NOTE: Brute force may take time - be patient!             ║
+╚══════════════════════════════════════════════════════════════╝
+        `);
+
+        // Window resize handler for matrix effect
+        window.addEventListener('resize', () => {
+            const canvas = document.querySelector('#matrixBg canvas');
+            if (canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        });
+    </script>
+</body>
+</html>
